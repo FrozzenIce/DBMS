@@ -1,6 +1,6 @@
-create database lab_workK;
+CREATE database lab_workK;
 
-use lab_workK;
+USE lab_workK;
 
 -- Part 1: DB setup
 
@@ -171,7 +171,7 @@ ADD CONSTRAINT chk_credit_hour CHECK (credit_hour >= 1);
 -- 7 Simple Update: Alice Smith (student_id = 1) got a new phone number. Write a query to update her phone_number to '555-9999'.
 UPDATE students SET phone_number = '555-9999' WHERE student_id = 1;
 
--- Re-add age for qn 2
+-- Re-add age for qn 8
 ALTER TABLE students ADD age INT;
 
 UPDATE students SET age = 21 WHERE student_id = 1;
@@ -221,7 +221,7 @@ WHERE
             name = 'Evan Wright'
     );
 
-DELETE FROM students WHERE name = 'Evan Wright'
+DELETE FROM students WHERE name = 'Evan Wright';
 
 -- 13 Delete with Condition: Write a query to delete any course from the courses table that has fewer than 3 credit_hours.
 DELETE FROM courses WHERE credit_hour < 3;
@@ -232,7 +232,43 @@ DELETE FROM enrollment WHERE student_id = 3;
 DELETE FROM students WHERE student_id = 3;
 
 -- 15 Clear a Table: Write a query to delete all records from the enrollment table without deleting the table structure itself.
-TRUNCATE Table students;
+DELETE FROM enrollment;
+
+-- Restore all table data for subsequent exercises
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM enrollment;
+DELETE FROM students;
+DELETE FROM courses;
+SET FOREIGN_KEY_CHECKS = 1;
+SELECT * FROM enrollment;
+
+
+-- Restore Students to their modified state (Alice and Bob's updates, Diana's age)
+INSERT INTO students (student_id, name, age, email, phone_number) VALUES
+(1, 'Alice Smith', 21, 'alice@example.com', '555-9999'),
+(2, 'Bob Johnson', 23, 'bob.j@newmail.com', '555-0102'),
+(4, 'Diana Prince', 19, 'diana@example.com', '555-0104');
+
+-- Restore Courses to their updated credit hour states
+INSERT INTO courses (course_id, course_name, credit_hour) VALUES
+(101, 'Introduction to Computer Science', 4),
+(102, 'Data Structures', 5),
+(103, 'Database Management Systems', 4),
+(104, 'Web Development', 4),
+(105, 'Artificial Intelligence', 4);
+
+-- Restore Enrollment (excluding deleted students 3 and 5)
+INSERT INTO enrollment (enrollment_id, course_id, student_id) VALUES
+(1001, 101, 1),
+(1002, 103, 1),
+(1003, 102, 2),
+(1004, 104, 2),
+(1006, 105, 4),
+(1009, 102, 1);
+
+
+
+
 
 -- Aggregate Functions
 
@@ -265,7 +301,11 @@ FROM enrollment
 GROUP BY
     student_id;
 
+-- Insert data to ensure at least one course (102) has more than 2 students enrolled - For Q-15
+INSERT INTO enrollment (enrollment_id, course_id, student_id) VALUES (1010, 102, 4);
+
 -- 15 List the course_ids of courses that have more than 2 students enrolled (Use HAVING).
+
 SELECT course_id
 FROM enrollment
 GROUP BY
@@ -311,7 +351,11 @@ FROM
 WHERE
     cs.course_name = 'Database Management Systems';
 
+-- Insert a student who has no enrollment to ensure Q21 has suitable data to select
+INSERT INTO students (student_id, name, age, email, phone_number) VALUES (6, 'Frank Underwood', 22, 'frank@example.com', '555-0106');
+
 -- 21 Identify any students who are not enrolled in any course.
+
 SELECT *
 FROM students as s
     LEFT JOIN enrollment as e ON e.student_id = s.student_id
@@ -330,3 +374,66 @@ GROUP BY
 -- Subqueries and Advanced Logic
 
 -- 23 Find the names of students who are enrolled in the course with the highest credit hours
+SELECT s.name
+FROM students s
+JOIN enrollment e ON s.student_id = e.student_id
+JOIN courses c ON e.course_id = c.course_id
+WHERE c.credit_hour = (SELECT MAX(credit_hour) FROM courses);
+
+-- 24 List the courses that have an enrollment count strictly higher than the average enrollment count across all courses.
+SELECT c.course_name, COUNT(e.student_id) AS enrollment_count
+FROM courses c
+LEFT JOIN enrollment e ON c.course_id = e.course_id
+GROUP BY c.course_id, c.course_name
+HAVING COUNT(e.student_id) > (
+    SELECT AVG(enrollment_count)
+    FROM (
+        SELECT COUNT(student_id) AS enrollment_count
+        FROM enrollment
+        GROUP BY course_id
+    ) AS temp
+);
+
+-- 25 Find the names of students whose age is strictly greater than the average age of all students.
+SELECT name
+FROM students
+WHERE age > (SELECT AVG(age) FROM students);
+
+-- Stored Procedures and DML
+
+-- 26 Write a Stored Procedure named GetStudentCourses that accepts a student_id as an input parameter and returns the names of all courses that specific student is enrolled in.
+DELIMITER //
+
+CREATE PROCEDURE GetStudentCourses(IN p_student_id INT)
+BEGIN
+    SELECT c.course_name
+    FROM courses c
+    JOIN enrollment e ON c.course_id = e.course_id
+    WHERE e.student_id = p_student_id;
+END //
+
+CALL GetStudentCourses(1);
+DELIMITER ;
+
+-- 27 Write a Stored Procedure named EnrollStudent that takes p_student_id and p_course_id as inputs, and inserts a new record into the enrollment table.
+DELIMITER //
+
+CREATE PROCEDURE EnrollStudent(IN p_student_id INT, IN p_course_id INT)
+BEGIN
+    DECLARE new_id INT;
+    SELECT COALESCE(MAX(enrollment_id), 0) + 1 INTO new_id FROM enrollment;
+    
+    INSERT INTO enrollment (enrollment_id, course_id, student_id)
+    VALUES (new_id, p_course_id, p_student_id);
+END //
+
+CALL EnrollStudent(4, 103);
+SELECT * FROM enrollment WHERE student_id = 4;
+
+DELIMITER ;
+
+-- 28 Write an UPDATE statement to increase the credit hours of 'Web Development' by 1.
+UPDATE courses
+SET credit_hour = credit_hour + 1
+WHERE course_name = 'Web Development';
+SELECT * FROM courses WHERE course_name = 'Web Development';
