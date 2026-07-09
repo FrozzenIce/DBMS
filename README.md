@@ -22,7 +22,7 @@ In this lab, I created a basic database named `college` and a `students` table. 
 ## Lab 2 & 3 & 4: Advanced SQL Queries and Joins
 This lab was about setting up a relational database with three connected tables (Students, Courses, and Enrollment) and writing queries to manipulate and join the data.
 
-* **File:** [Lab 2 & 3 & 4.sql](./Lab_2-3.sql)
+* **File:** [Lab 2 & 3 & 4.sql](./Lab_2-3-4.sql)
 
 ### Database Relationships
 * A student can enroll in multiple courses.
@@ -223,6 +223,8 @@ This lab was about user creation, user drop, granting and revoking database acce
 
 ## Lab 6: Role creation & drop & permission grant & revoke
 This lab was about role creation, role drop, role set to users, granting and revoking database access permissions to roles.
+
+* **File:** [Lab 6.sql](./Lab6.sql)
 
 ![Lab 6 - Show roles (after role creation)](/screenshots/lab_5-6/Lab-6%20(3).png)
 
